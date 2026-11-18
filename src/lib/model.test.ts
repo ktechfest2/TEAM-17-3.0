@@ -42,6 +42,14 @@ const doc = (): DocumentRecord => ({
   },
 });
 describe("comparison trust boundaries", () => {
+  it.each(["unknown", "N/A", "Unreadable", "?"])(
+    "blocks unknown placeholder %s even when equal",
+    (value) => {
+      const a = doc();
+      a.identity.unit = value;
+      expect(compare(a, a).status).toBe("Cannot compare—identity needs review");
+    },
+  );
   it("matches reviewed figures with known matching identities", () =>
     expect(compare(doc(), doc()).status).toBe("Match"));
   it("reports the signed second-minus-first delta", () => {

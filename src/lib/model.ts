@@ -106,16 +106,27 @@ export function documentErrors(doc: DocumentRecord): string[] {
 }
 const identityValue = (v: string) =>
   v.trim().replace(/\s+/g, " ").toUpperCase();
+const unknownIdentityValues = new Set([
+  "",
+  "UNKNOWN",
+  "UNREADABLE",
+  "N/A",
+  "NA",
+  "NOT KNOWN",
+  "NOT AVAILABLE",
+  "?",
+  "-",
+]);
 export function identityIssues(a: DocumentRecord, b: DocumentRecord): string[] {
   const issues = identityKeys
     .filter(
       (k) =>
-        !identityValue(a.identity[k]) ||
-        !identityValue(b.identity[k]) ||
+        unknownIdentityValues.has(identityValue(a.identity[k])) ||
+        unknownIdentityValues.has(identityValue(b.identity[k])) ||
         identityValue(a.identity[k]) !== identityValue(b.identity[k]),
     )
     .map((k) => labels[k]);
-  if (![a, b].every((d) => /^\d{4}$/.test(d.identity.year.trim())))
+  if (![a, b].every((d) => /^[1-9]\d{3}$/.test(d.identity.year.trim())))
     issues.push("Valid four-digit year");
   if (![a, b].every((d) => d.identityReviewed))
     issues.push("Human identity review");

@@ -1,10 +1,86 @@
 import { test, expect, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 async function confirm(page: Page, kind: string) {
   await page.getByLabel("I checked these identifiers").check();
   await page
     .getByRole("button", { name: `Confirm ${kind} & continue` })
     .click();
 }
+test("fresh uploads and manual entry work without demo-prefilled data", async ({
+  page,
+}) => {
+  await page.goto("/compare/new");
+  await page.getByRole("button", { name: "Continue to source image" }).click();
+  for (const [index, kind] of ["EC60(E)", "EC8A"].entries()) {
+    await page
+      .locator("input[type=file]")
+      .setInputFiles(
+        `public/demo/synthetic-${index === 0 ? "ec60e" : "ec8a"}.png`,
+      );
+    await expect(
+      page.getByRole("img", { name: `${kind} source document for review` }),
+    ).toBeVisible();
+    for (const [label, value] of Object.entries({
+      "Election title": "Synthetic demonstration election",
+      "Election year": "2026",
+      "Contest / constituency": "Demo council chair",
+      State: "Demo State",
+      "Local government area": "Demo LGA",
+      Ward: "Demo Ward 01",
+      "Polling-unit number / name": "001 — Demo community hall",
+    }))
+      await page.getByLabel(label, { exact: true }).fill(value);
+    for (const [i, count] of ["120", index ? "185" : "85", "42"].entries()) {
+      if (i) await page.getByRole("button", { name: "Add party" }).click();
+      await page
+        .getByLabel(`Party ${i + 1}`, { exact: true })
+        .fill(`Party ${String.fromCharCode(65 + i)}`);
+      await page.getByLabel(`Votes ${i + 1}`, { exact: true }).fill(count);
+    }
+    await page.getByLabel("I checked these identifiers").focus();
+    await page.keyboard.press("Space");
+    await page
+      .getByRole("button", { name: `Confirm ${kind} & continue` })
+      .focus();
+    await page.keyboard.press("Enter");
+  }
+  await expect(
+    page.getByRole("heading", { name: "Difference detected", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "+100", exact: true }),
+  ).toBeVisible();
+});
+test("landing, source review and report pass automated accessibility checks", async ({
+  page,
+}) => {
+  await page.goto("/");
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await page.goto("/compare/new?demo=match");
+  await expect(page.getByLabel("Votes 1", { exact: true })).toBeVisible();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await confirm(page, "EC60(E)");
+  await confirm(page, "EC8A");
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+});
 test("manual no-key flow persists source review and reports +100 on a narrow viewport", async ({
   page,
 }) => {
