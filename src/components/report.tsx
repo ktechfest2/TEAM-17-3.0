@@ -1,10 +1,192 @@
-'use client';
-import { compare, disclaimer, identityKeys, labels, type Comparison } from '@/lib/model';
-export function Report({ record, onEdit }: { record: Comparison; onEdit: (stage: number) => void }) {
+"use client";
+import {
+  compare,
+  disclaimer,
+  identityKeys,
+  labels,
+  type Comparison,
+} from "@/lib/model";
+export function Report({
+  record,
+  onEdit,
+}: {
+  record: Comparison;
+  onEdit: (stage: number) => void;
+}) {
   const result = compare(...record.documents);
   function download() {
-    const blob = new Blob([JSON.stringify({ ...record, result, disclaimer, integrityNote: 'Local editable audit; hashes identify bytes, not authenticity.' }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `resulttrace-${record.id}.json`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const blob = new Blob(
+      [
+        JSON.stringify(
+          {
+            ...record,
+            result,
+            disclaimer,
+            integrityNote:
+              "Local editable audit; hashes identify bytes, not authenticity.",
+          },
+          null,
+          2,
+        ),
+      ],
+      { type: "application/json" },
+    );
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `resulttrace-${record.id}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  return <section className="report"><div className={`result-banner ${result.status === 'Match' ? 'match' : ''}`}><div><div className="eyebrow">COMPARISON RESULT · HUMAN-REVIEWED ENTRIES</div><h2>{result.status}</h2><p>{result.issues.length ? `Review: ${result.issues.join(', ')}.` : result.status === 'Insufficient evidence' ? 'At least one source, confirmation, party or count is incomplete. Unknown is not zero.' : 'A deterministic comparison of the entered party rows. Delta = EC8A minus EC60(E).'}</p></div><span className="result-symbol" aria-hidden>{result.status === 'Match' ? '=' : '≠'}</span></div><aside className="notice"><strong>{disclaimer}</strong></aside><div className="report-toolbar no-print"><span className="caption">Saved on this device · not cloud-synced</span><div className="actions"><button className="button ghost small" onClick={download}>Download evidence JSON</button><button className="button small" onClick={() => window.print()}>Print / save PDF</button></div></div><h3>Party-by-party comparison</h3><div className="table-scroll"><table><thead><tr><th>Reviewed party label</th><th>EC60(E)</th><th>EC8A</th><th>Signed delta</th></tr></thead><tbody>{result.rows.map(r => <tr key={r.party} className={r.delta ? 'difference-row' : ''}><th scope="row">{r.party}</th><td>{r.left ?? 'Unknown / unconfirmed'}</td><td>{r.right ?? 'Unknown / unconfirmed'}</td><td><strong>{r.delta === null ? '—' : r.delta > 0 ? `+${r.delta}` : r.delta}</strong></td></tr>)}</tbody></table></div><p className="caption">A Match covers only the reviewed rows. It does not certify a complete or authentic election result.</p><div className="report-sources">{record.documents.map((doc,i) => <section key={doc.kind} className="report-source"><div className="panel-heading"><h3>Source {i+1} · {doc.kind}</h3><button className="button ghost small no-print" onClick={() => onEdit(i+1)}>Review / edit</button></div><span className="pill">{doc.evidence?.provenance ?? 'No source'}</span>{doc.evidence && <><img src={doc.evidence.preview} alt={`${doc.kind} source evidence`}/><a className="text-link no-print" download={doc.evidence.name} href={doc.evidence.original}>Download original image ↗</a></>}<dl>{identityKeys.map(k => <div key={k}><dt>{labels[k]}</dt><dd>{doc.identity[k] || 'Unknown'}</dd></div>)}</dl><p className="caption">Confirmed: {doc.confirmedAt ? new Date(doc.confirmedAt).toLocaleString() : 'Not confirmed'}<br/>Identity reviewed: {doc.identityReviewed ? 'Yes' : 'No'}<br/>Source added: {doc.evidence?.addedAt ?? 'None'}<br/>Note: {doc.reviewNote || 'None'}</p><p className="hash">SHA-256: {doc.evidence?.hash ?? 'Unavailable'}</p></section>)}</div><details className="audit"><summary>Audit history · {record.audit.length} events</summary><p className="caption">Local, editable record—not a certified chain of custody. Full snapshots are included in the evidence JSON download.</p>{record.audit.map((event,i) => <div key={i}><time>{new Date(event.at).toLocaleString()}</time><strong>{event.action}</strong><pre>{event.detail}</pre></div>)}</details><p className="caption">Record {record.id} · Created {record.createdAt} · Updated {record.updatedAt}<br/>Original hashes identify bytes, not whether the source is genuine.</p></section>;
+  return (
+    <section className="report">
+      <div
+        className={`result-banner ${result.status === "Match" ? "match" : ""}`}
+      >
+        <div>
+          <div className="eyebrow">
+            COMPARISON RESULT · HUMAN-REVIEWED ENTRIES
+          </div>
+          <h2>{result.status}</h2>
+          <p>
+            {result.issues.length
+              ? `Review: ${result.issues.join(", ")}.`
+              : result.status === "Insufficient evidence"
+                ? "At least one source, confirmation, party or count is incomplete. Unknown is not zero."
+                : "A deterministic comparison of the entered party rows. Delta = EC8A minus EC60(E)."}
+          </p>
+        </div>
+        <span className="result-symbol" aria-hidden>
+          {result.status === "Match" ? "=" : "≠"}
+        </span>
+      </div>
+      <aside className="notice">
+        <strong>{disclaimer}</strong>
+      </aside>
+      <div className="report-toolbar no-print">
+        <span className="caption">Saved on this device · not cloud-synced</span>
+        <div className="actions">
+          <button className="button ghost small" onClick={download}>
+            Download evidence JSON
+          </button>
+          <button className="button small" onClick={() => window.print()}>
+            Print / save PDF
+          </button>
+        </div>
+      </div>
+      <h3>Party-by-party comparison</h3>
+      <div className="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Reviewed party label</th>
+              <th>EC60(E)</th>
+              <th>EC8A</th>
+              <th>Signed delta</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.rows.map((r) => (
+              <tr key={r.party} className={r.delta ? "difference-row" : ""}>
+                <th scope="row">{r.party}</th>
+                <td>{r.left ?? "Unknown / unconfirmed"}</td>
+                <td>{r.right ?? "Unknown / unconfirmed"}</td>
+                <td>
+                  <strong>
+                    {r.delta === null
+                      ? "—"
+                      : r.delta > 0
+                        ? `+${r.delta}`
+                        : r.delta}
+                  </strong>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="caption">
+        A Match covers only the reviewed rows. It does not certify a complete or
+        authentic election result.
+      </p>
+      <div className="report-sources">
+        {record.documents.map((doc, i) => (
+          <section key={doc.kind} className="report-source">
+            <div className="panel-heading">
+              <h3>
+                Source {i + 1} · {doc.kind}
+              </h3>
+              <button
+                className="button ghost small no-print"
+                onClick={() => onEdit(i + 1)}
+              >
+                Review / edit
+              </button>
+            </div>
+            <span className="pill">
+              {doc.evidence?.provenance ?? "No source"}
+            </span>
+            {doc.evidence && (
+              <>
+                <img
+                  src={doc.evidence.preview}
+                  alt={`${doc.kind} source evidence`}
+                />
+                <a
+                  className="text-link no-print"
+                  download={doc.evidence.name}
+                  href={doc.evidence.original}
+                >
+                  Download original image ↗
+                </a>
+              </>
+            )}
+            <dl>
+              {identityKeys.map((k) => (
+                <div key={k}>
+                  <dt>{labels[k]}</dt>
+                  <dd>{doc.identity[k] || "Unknown"}</dd>
+                </div>
+              ))}
+            </dl>
+            <p className="caption">
+              Confirmed:{" "}
+              {doc.confirmedAt
+                ? new Date(doc.confirmedAt).toLocaleString()
+                : "Not confirmed"}
+              <br />
+              Identity reviewed: {doc.identityReviewed ? "Yes" : "No"}
+              <br />
+              Source added: {doc.evidence?.addedAt ?? "None"}
+              <br />
+              Note: {doc.reviewNote || "None"}
+            </p>
+            <p className="hash">
+              SHA-256: {doc.evidence?.hash ?? "Unavailable"}
+            </p>
+          </section>
+        ))}
+      </div>
+      <details className="audit">
+        <summary>Audit history · {record.audit.length} events</summary>
+        <p className="caption">
+          Local, editable record—not a certified chain of custody. Full
+          snapshots are included in the evidence JSON download.
+        </p>
+        {record.audit.map((event, i) => (
+          <div key={i}>
+            <time>{new Date(event.at).toLocaleString()}</time>
+            <strong>{event.action}</strong>
+            <pre>{event.detail}</pre>
+          </div>
+        ))}
+      </details>
+      <p className="caption">
+        Record {record.id} · Created {record.createdAt} · Updated{" "}
+        {record.updatedAt}
+        <br />
+        Original hashes identify bytes, not whether the source is genuine.
+      </p>
+    </section>
+  );
 }
